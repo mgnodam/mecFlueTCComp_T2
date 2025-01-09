@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from gmshProcMalha import *
 
-# Parâmetros da geometria
-
+# Parâmetros do problema
 Lx0 = -2
 Lxf = 5
 Ly0 = -0.5
@@ -12,16 +11,18 @@ Lyf = 0.5
 
 dy= abs(Lyf - Ly0)
 
-# Constantes da Função corrente
+rho = 1.225
+
+# Parâmetros para condição de contorno
 
 c1 = 0
 c2 = 1
 
 dc= abs(c2 - c1)
 
-# Criação da malha
+# Construindo malha
 
-mshName= 'mshTri4.msh'
+mshName= 'naca0012_a15.msh'
 
 X = procMsh(mshName)[0]
 Y = procMsh(mshName)[1]
@@ -34,7 +35,7 @@ IENbound = procMsh(mshName)[3]
 IENboundNames = procMsh(mshName)[4]
 ne = IEN.shape[0]
 
-# Definição das condições de contorno
+# Definindo condições de contorno
 
 Psicc = np.zeros( (npoints) , dtype='float')
 
@@ -71,17 +72,14 @@ for elem in range(len(IENbound)):
     Psicc[IENbound[elem][0]] = c2
     Psicc[IENbound[elem][1]] = c2
   
-
 cc = cc1+cc2+cc3+cc4+cc5
 
-# Montagem das matrizes globais
+# Construindo as matrizes globais
 
 K = np.zeros( (npoints,npoints),dtype='float' )
 M = np.zeros( (npoints,npoints),dtype='float' )
 Gx = np.zeros( (npoints,npoints),dtype='float' )
 Gy = np.zeros( (npoints,npoints),dtype='float' )
-
-# Loop de solução
 
 for e in range(0,ne):
  v = IEN[e]
@@ -105,9 +103,6 @@ for e in range(0,ne):
  kyele = (1.0/(4.0*area)) * np.array([ [ci*ci, ci*cj, ci*ck],
                                        [cj*ci, cj*cj, cj*ck],
                                        [ck*ci, ck*cj, ck*ck] ])
- kxyele = (1.0/(4.0*area)) * np.array([[bi*ci, bi*cj, bi*ck],
-                                       [bj*ci, bj*cj, bj*ck],
-                                       [bk*ci, bk*cj, bk*ck] ])
  
  gxele = (1.0/6.0) * np.array([ [bi, bj, bk],
                                 [bi, bj, bk],
@@ -133,23 +128,85 @@ for e in range(0,ne):
    Gx[iglobal,jglobal] += gxele[ilocal,jlocal]
    Gy[iglobal,jglobal] += gyele[ilocal,jlocal]
 
-# Imposição das condições de contorno
-
 bPsi = np.zeros( (npoints) , dtype='float')
+
+# Impondo condições de contorno
 
 for i in cc:
  K[i,:] = 0 # zerando a linha i
  K[i,i] = 1.0 # 1.0 na diagonal
  bPsi[i]   = Psicc[i] # impondo T em b
-
-# Solução da equação
+ 
+# Resolvendo
 
 Psi = np.linalg.solve(K,bPsi)
 
 vx = np.linalg.solve(M,(Gy@Psi))
 vy = np.linalg.solve(M,(-Gx@Psi))
 
+# Identificando parâmetros para iteração da condição de contorno do perfil
+
+angle = degrees(atan(abs(Y[69] - Y[4])/abs(X[69] - X[4])))  
+
+teAngle = 0
+
+cSup = 0.0
+cInf = 1.0
+cMed = (cSup + cInf) / 2
+
+iter = 0
+
+def teAngle(cMed):  # Função para resolver e encontrar o ângulo da velocidade de escoamento em um ponto
+  
+  for elem in range(len(IENbound)):      
+      if IENboundNames[elem] == "airfWall":
+        Psicc[IENbound[elem][0]] = cMed
+        Psicc[IENbound[elem][1]] = cMed
+        
+  for i in cc:
+    bPsi[i]   = Psicc[i]
+
+  Psi = np.linalg.solve(K,bPsi)
+
+  vx = np.linalg.solve(M,(Gy@Psi))
+  vy = np.linalg.solve(M,(-Gx@Psi))
+
+  teAngle = degrees(atan(vy[4]/vx[4]))
+  
+  return teAngle
+
+
+dif = teAngle(cMed) - (-angle)  # Diferença para utilizar o método da bissecção
+
+while abs(dif) > 1e-4 and iter < 100: # Loop iterativo para modificar as condições até satisfazer a condição de Kutta
+  
+  cMed = (cSup + cInf) / 2
+  
+  teAngleSup = teAngle(cSup)
+  teAngleInf = teAngle(cInf)
+  
+  difSup = teAngle(cSup) - (-angle)
+  difInf = teAngle(cInf) - (-angle)
+  dif = teAngle(cMed) - (-angle)
+  
+  if difInf * dif < 0:
+    
+    cSup = cMed
+    
+  elif difInf * dif > 0:
+    
+    cInf = cMed
+        
+  iter += 1
+  print('Iteração', iter)
+  
+# Construindo os campos finalmente
+
+Psi = np.linalg.solve(K,bPsi)
+vx = np.linalg.solve(M,(Gy@Psi))
+vy = np.linalg.solve(M,(-Gx@Psi))  
 v = np.sqrt(vx*vx + vy*vy)
+
 
 # PLOTANDO OS RESULTADOS
 
@@ -160,6 +217,9 @@ plt.plot(X[cc2],Y[cc2],'go')
 plt.plot(X[cc3],Y[cc3],'yo')
 plt.plot(X[cc4],Y[cc4],'ro')
 plt.plot(X[cc5],Y[cc5],'mo')
+plt.plot(X[4],Y[4],'co')
+plt.plot(X[5],Y[5],'co')
+plt.plot(X[133],Y[133],'co')
 plt.show()
 
 #Resultados

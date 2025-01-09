@@ -20,8 +20,6 @@ def procMsh(file_name):
     #print(IENboundTypeElem)
 
     boundNames= list(msh.field_data.keys())
-    
-    print(boundNames)
 
     #IENboundElem = [boundNames[elem] for elem in IENboundTypeElem]
 
@@ -40,8 +38,6 @@ def procMsh(file_name):
             IENboundElemNames.append(boundNames[4])
         if i == 140:
             IENboundElemNames.append(boundNames[5])
-            
-    print(IENboundElemNames)
 
     return [X, Y, IEN, IENbound, IENboundElemNames]
 
