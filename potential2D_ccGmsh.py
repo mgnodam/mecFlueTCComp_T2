@@ -5,8 +5,8 @@ from gmshProcMalha import *
 
 Lx0 = -2
 Lxf = 5
-Ly0 = -1
-Lyf = 1
+Ly0 = -0.5
+Lyf = 0.5
 
 dy= abs(Lyf - Ly0)
 
@@ -134,13 +134,17 @@ for i in cc:
  K[i,:] = 0 # zerando a linha i
  K[i,i] = 1.0 # 1.0 na diagonal
  bPsi[i]   = Psicc[i] # impondo T em b
- 
-
 
 Psi = np.linalg.solve(K,bPsi)
 
+vx = np.linalg.solve(M,(Gy@Psi))
+vy = np.linalg.solve(M,(-Gx@Psi))
+
+#plt.figure(figsize = (16,9))
 ax = plt.axes()
 ax.set_aspect('equal')
 ax.triplot(triang,'ko-')
 ax.tricontourf(triang,Psi,cmap='viridis')
+#ax.tricontourf(triang,vy,cmap='viridis')
+#plt.colorbar()
 plt.show()
