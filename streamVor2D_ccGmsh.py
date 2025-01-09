@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from gmshProcMalha import *
 
+# Parâmetros da geometria
+
 Lx0 = -2
 Lxf = 5
 Ly0 = -0.5
@@ -10,12 +12,16 @@ Lyf = 0.5
 
 dy= abs(Lyf - Ly0)
 
+# Constantes da Função corrente
+
 c1 = 0
 c2 = 1
 
 dc= abs(c2 - c1)
 
-mshName= 'mshTri3.msh'
+# Criação da malha
+
+mshName= 'mshTri4.msh'
 
 X = procMsh(mshName)[0]
 Y = procMsh(mshName)[1]
@@ -27,6 +33,8 @@ IEN = procMsh(mshName)[2]
 IENbound = procMsh(mshName)[3]
 IENboundNames = procMsh(mshName)[4]
 ne = IEN.shape[0]
+
+# Definição das condições de contorno
 
 Psicc = np.zeros( (npoints) , dtype='float')
 
@@ -66,20 +74,14 @@ for elem in range(len(IENbound)):
 
 cc = cc1+cc2+cc3+cc4+cc5
 
-#--------------------------------------------------
-plt.triplot(X,Y,IEN,'ko-')
-plt.plot(X[cc1],Y[cc1],'bo')
-plt.plot(X[cc2],Y[cc2],'go')
-plt.plot(X[cc3],Y[cc3],'yo')
-plt.plot(X[cc4],Y[cc4],'ro')
-plt.plot(X[cc5],Y[cc5],'mo')
-plt.show()
-#-------------------------------------------------- 
+# Montagem das matrizes globais
 
 K = np.zeros( (npoints,npoints),dtype='float' )
 M = np.zeros( (npoints,npoints),dtype='float' )
 Gx = np.zeros( (npoints,npoints),dtype='float' )
 Gy = np.zeros( (npoints,npoints),dtype='float' )
+
+# Loop de solução
 
 for e in range(0,ne):
  v = IEN[e]
@@ -103,6 +105,9 @@ for e in range(0,ne):
  kyele = (1.0/(4.0*area)) * np.array([ [ci*ci, ci*cj, ci*ck],
                                        [cj*ci, cj*cj, cj*ck],
                                        [ck*ci, ck*cj, ck*ck] ])
+ kxyele = (1.0/(4.0*area)) * np.array([[bi*ci, bi*cj, bi*ck],
+                                       [bj*ci, bj*cj, bj*ck],
+                                       [bk*ci, bk*cj, bk*ck] ])
  
  gxele = (1.0/6.0) * np.array([ [bi, bj, bk],
                                 [bi, bj, bk],
@@ -125,8 +130,10 @@ for e in range(0,ne):
    
    K[iglobal,jglobal] += kele[ilocal,jlocal]
    M[iglobal,jglobal] += mele[ilocal,jlocal]
+   Gx[iglobal,jglobal] += gxele[ilocal,jlocal]
+   Gy[iglobal,jglobal] += gyele[ilocal,jlocal]
 
-#A = K.copy()
+# Imposição das condições de contorno
 
 bPsi = np.zeros( (npoints) , dtype='float')
 
@@ -135,16 +142,44 @@ for i in cc:
  K[i,i] = 1.0 # 1.0 na diagonal
  bPsi[i]   = Psicc[i] # impondo T em b
 
+# Solução da equação
+
 Psi = np.linalg.solve(K,bPsi)
 
 vx = np.linalg.solve(M,(Gy@Psi))
 vy = np.linalg.solve(M,(-Gx@Psi))
 
-#plt.figure(figsize = (16,9))
-ax = plt.axes()
-ax.set_aspect('equal')
-ax.triplot(triang,'ko-')
-ax.tricontourf(triang,Psi,cmap='viridis')
-#ax.tricontourf(triang,vy,cmap='viridis')
-#plt.colorbar()
+v = np.sqrt(vx*vx + vy*vy)
+
+# PLOTANDO OS RESULTADOS
+
+#Malha
+plt.triplot(X,Y,IEN,'ko-')
+plt.plot(X[cc1],Y[cc1],'bo')
+plt.plot(X[cc2],Y[cc2],'go')
+plt.plot(X[cc3],Y[cc3],'yo')
+plt.plot(X[cc4],Y[cc4],'ro')
+plt.plot(X[cc5],Y[cc5],'mo')
+plt.show()
+
+#Resultados
+fig1, (ax1,ax2,ax3,ax4) = plt.subplots(nrows = 4)
+
+psiPlot = ax1.tricontour(triang, Psi , levels= 25 , cmap = 'viridis')
+vxPlot = ax2.tricontourf(triang, vx , levels= 200 , cmap = 'viridis')
+vyPlot = ax3.tricontourf(triang, vy , levels= 200 , cmap = 'viridis')
+vPlot = ax4.tricontourf(triang, v , levels= 200 , cmap = 'viridis')
+
+fig1.colorbar(psiPlot, ax=ax1)
+fig1.colorbar(vxPlot, ax=ax2)
+fig1.colorbar(vxPlot, ax=ax3)
+fig1.colorbar(vPlot, ax=ax4)
+
+for ax in (ax1,ax2,ax3,ax4):
+  ax.plot(X[cc1],Y[cc1],'k-')
+  ax.plot(X[cc2],Y[cc2],'k-')
+  ax.plot(X[cc3],Y[cc3],'k-')
+  ax.plot(X[cc4],Y[cc4],'k-')
+  ax.plot(X[cc5],Y[cc5],'k-')
+
 plt.show()
