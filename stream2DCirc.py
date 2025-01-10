@@ -11,10 +11,7 @@ Lyf = 0.5
 
 dy= abs(Lyf - Ly0)
 
-rho = 1.225
-
 # Parâmetros para condição de contorno
-
 c1 = 0
 c2 = 1
 
@@ -223,6 +220,9 @@ plt.plot(X[133],Y[133],'co')
 plt.show()
 
 #Resultados
+
+print('Função Psi nas paredes do aerofólio =', cMed)
+
 fig1, (ax1,ax2,ax3,ax4) = plt.subplots(nrows = 4)
 
 psiPlot = ax1.tricontour(triang, Psi , levels= 25 , cmap = 'viridis')
@@ -230,10 +230,10 @@ vxPlot = ax2.tricontourf(triang, vx , levels= 200 , cmap = 'viridis')
 vyPlot = ax3.tricontourf(triang, vy , levels= 200 , cmap = 'viridis')
 vPlot = ax4.tricontourf(triang, v , levels= 200 , cmap = 'viridis')
 
-fig1.colorbar(psiPlot, ax=ax1)
-fig1.colorbar(vxPlot, ax=ax2)
-fig1.colorbar(vxPlot, ax=ax3)
-fig1.colorbar(vPlot, ax=ax4)
+fig1.colorbar(psiPlot, ax=ax1, label = 'Psi')
+fig1.colorbar(vxPlot, ax=ax2, label = 'vx (m/s)')
+fig1.colorbar(vxPlot, ax=ax3, label = 'vy (m/s)')
+fig1.colorbar(vPlot, ax=ax4, label = 'v (m/s)')
 
 for ax in (ax1,ax2,ax3,ax4):
   ax.plot(X[cc1],Y[cc1],'k-')

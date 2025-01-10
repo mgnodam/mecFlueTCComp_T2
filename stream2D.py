@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 from gmshProcMalha import *
 
+# Parâmetros do problema
 Lx0 = -2
 Lxf = 5
 Ly0 = -0.5
@@ -10,12 +11,14 @@ Lyf = 0.5
 
 dy= abs(Lyf - Ly0)
 
+# Parâmetros para condição de contorno
 c1 = 0
 c2 = 1
 
 dc= abs(c2 - c1)
 
-mshName= 'mshTri3.msh'
+# Construindo malha
+mshName= 'naca0012_a0.msh'
 
 X = procMsh(mshName)[0]
 Y = procMsh(mshName)[1]
@@ -27,6 +30,8 @@ IEN = procMsh(mshName)[2]
 IENbound = procMsh(mshName)[3]
 IENboundNames = procMsh(mshName)[4]
 ne = IEN.shape[0]
+
+# Definindo condições de contorno
 
 Psicc = np.zeros( (npoints) , dtype='float')
 
@@ -63,10 +68,9 @@ for elem in range(len(IENbound)):
     Psicc[IENbound[elem][0]] = c2
     Psicc[IENbound[elem][1]] = c2
   
-
 cc = cc1+cc2+cc3+cc4+cc5
 
-
+# Construindo as matrizes globais
 
 K = np.zeros( (npoints,npoints),dtype='float' )
 M = np.zeros( (npoints,npoints),dtype='float' )
@@ -120,14 +124,16 @@ for e in range(0,ne):
    Gx[iglobal,jglobal] += gxele[ilocal,jlocal]
    Gy[iglobal,jglobal] += gyele[ilocal,jlocal]
 
-#A = K.copy()
-
 bPsi = np.zeros( (npoints) , dtype='float')
+
+# Impondo condições de contorno
 
 for i in cc:
  K[i,:] = 0 # zerando a linha i
  K[i,i] = 1.0 # 1.0 na diagonal
  bPsi[i]   = Psicc[i] # impondo T em b
+ 
+# Resolvendo
 
 Psi = np.linalg.solve(K,bPsi)
 
@@ -155,10 +161,10 @@ vxPlot = ax2.tricontourf(triang, vx , levels= 200 , cmap = 'viridis')
 vyPlot = ax3.tricontourf(triang, vy , levels= 200 , cmap = 'viridis')
 vPlot = ax4.tricontourf(triang, v , levels= 200 , cmap = 'viridis')
 
-fig1.colorbar(psiPlot, ax=ax1)
-fig1.colorbar(vxPlot, ax=ax2)
-fig1.colorbar(vxPlot, ax=ax3)
-fig1.colorbar(vPlot, ax=ax4)
+fig1.colorbar(psiPlot, ax=ax1, label = 'Psi')
+fig1.colorbar(vxPlot, ax=ax2, label = 'vx (m/s)')
+fig1.colorbar(vxPlot, ax=ax3, label = 'vy (m/s)')
+fig1.colorbar(vPlot, ax=ax4, label = 'v (m/s)')
 
 for ax in (ax1,ax2,ax3,ax4):
   ax.plot(X[cc1],Y[cc1],'k-')
